@@ -1,18 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<title>Document</title>
-	<link rel="stylesheet" href="./css/index.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookLiker</title>
 </head>
 <body>
+  <ul id="list"></ul>
+  <div id="show-panel"></div>
 
-	<div id="list-panel">
-		<ul id="list">
+  <script>
+    const API_URL = 'http://localhost:3000/books';
+    const CURRENT_USER = { id: 1, username: 'pouros' };
 
-		</ul>
-	</div>
-	<div id="show-panel"></div>
-	<script type="text/javascript" src="./js/index.js"></script>
+    // Function to render the list of books
+    async function renderBooks() {
+      const response = await fetch(API_URL);
+      const books = await response.json();
+
+      const ul = document.getElementById('list');
+      ul.innerHTML = '';
+
+      books.forEach(book => {
+        const li = document.createElement('li');
+        li.textContent = book.title;
+        li.addEventListener('click', () => renderDetails(book));
+        ul.appendChild(li);
+      });
+    }
+
+    // Function to render book details
+    function renderDetails(book) {
+      const showPanel = document.getElementById('show-panel');
+      showPanel.innerHTML = `
+        <img src="${book.img_url}" alt="${book.title}" style="max-width: 200px;">
+        <h2>${book.title}</h2>
+        <p>${book.description}</p>
+        <ul id="users-list"></ul>
+        <button id="like-btn">LIKE</button>
+      `;
+
+      renderUsers(book);
+
+      const likeBtn = document.getElementById('like-btn');
+      likeBtn.addEventListener('click', () => handleLike(book));
+    }
+
+    // Function to render users who liked the book
+    function renderUsers(book) {
+      const usersList = document.getElementById('users-list');
+      if (!usersList) return;
+
+      usersList.innerHTML = '';
+
+      book.users.forEach(user => {
+        const userLi = document.createElement('li');
+        userLi.textContent = user.username;
+        usersList.appendChild(userLi);
+      });
+    }
+
+    // Function to handle like/unlike
+    async function handleLike(book) {
+      const isLiked = book.users.some(user => user.id === CURRENT_USER.id);
+      const newUsers = isLiked 
+        ? book.users.filter(user => user.id !== CURRENT_USER.id)
+        : [...book.users, CURRENT_USER];
+
+      const response = await fetch(`${API_URL}/${book.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ users: newUsers }),
+      });
+
+      if (response.ok) {
+        const updatedBook = await response.json();
+        renderDetails(updatedBook);
+      }
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', renderBooks);
+  </script>
 </body>
 </html>
